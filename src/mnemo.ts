@@ -7,7 +7,7 @@ export class MnemoClient {
   private apiKey: string;
   private baseUrl: string;
 
-  constructor(apiKey: string, baseUrl = 'https://api.mnemo.dev') {
+  constructor(apiKey: string, baseUrl = 'https://mnemo.solamp.workers.dev') {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
   }
@@ -27,26 +27,19 @@ export class MnemoClient {
       return;
     }
 
-    // Create new cache with all team docs
+    // Create new cache with all team docs from GitHub
     const sources = [
-      `/home/chris/nexus/docs`,
-      `/home/chris/nexus/ROADMAP.md`,
-      `/home/chris/nexus/CLAUDE.md`,
-      `/home/chris/mnemo/docs`,
-      `/home/chris/mnemo/ROADMAP.md`,
-      `/home/chris/mnemo/CLAUDE.md`,
-      `/home/chris/distributed-electrons/docs`,
-      `/home/chris/distributed-electrons/ROADMAP.md`,
-      `/home/chris/distributed-electrons/CLAUDE.md`,
+      'https://github.com/CyberBrown/nexus',
+      'https://github.com/CyberBrown/mnemo',
+      'https://github.com/CyberBrown/distributed-electrons',
     ];
 
     console.log(`Loading shared cache with ${sources.length} sources...`);
 
-    const response = await fetch(`${this.baseUrl}/context/load`, {
+    const response = await fetch(`${this.baseUrl}/tools/context_load`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify({
         alias,
@@ -70,11 +63,10 @@ export class MnemoClient {
   async query(question: string): Promise<string> {
     const alias = 'ecosystem-agent-shared';
 
-    const response = await fetch(`${this.baseUrl}/context/query`, {
+    const response = await fetch(`${this.baseUrl}/tools/context_query`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify({
         alias,
@@ -90,18 +82,23 @@ export class MnemoClient {
     }
 
     const data = (await response.json()) as any;
-    return data.response || data.answer || '';
+    // MCP tool returns: { content: [{ type: "text", text: "..." }] }
+    if (data.content && Array.isArray(data.content) && data.content.length > 0) {
+      return data.content[0].text || '';
+    }
+    return data.response || data.answer || data.text || '';
   }
 
   /**
    * List all active caches
    */
   async listCaches(): Promise<any[]> {
-    const response = await fetch(`${this.baseUrl}/context/list`, {
-      method: 'GET',
+    const response = await fetch(`${this.baseUrl}/tools/context_list`, {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({}),
     });
 
     if (!response.ok) {
@@ -109,6 +106,15 @@ export class MnemoClient {
     }
 
     const data = (await response.json()) as any;
+    // MCP tool returns: { content: [{ type: "text", text: "[{...}]" }] }
+    if (data.content && Array.isArray(data.content) && data.content.length > 0) {
+      try {
+        const parsed = JSON.parse(data.content[0].text);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
     return data.caches || [];
   }
 
@@ -116,11 +122,12 @@ export class MnemoClient {
    * Get cost statistics
    */
   async getStats(): Promise<{ totalCost: number; tokensUsed: number }> {
-    const response = await fetch(`${this.baseUrl}/context/stats`, {
-      method: 'GET',
+    const response = await fetch(`${this.baseUrl}/tools/context_stats`, {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({}),
     });
 
     if (!response.ok) {

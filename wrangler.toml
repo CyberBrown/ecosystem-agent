@@ -2,9 +2,12 @@ name = "ecosystem-agent"
 main = "src/index.ts"
 compatibility_date = "2024-05-01"
 
-# Cron trigger - runs at 3:00 AM UTC daily
+# Cron trigger - runs at 3:00 AM Eastern Time daily
+# 8am UTC = 3am EST (winter) | 7am UTC = 3am EDT (summer DST)
+# Note: Set to 8am UTC for EST. During DST, this becomes 4am EDT.
+# For true 3am year-round, consider using two schedules or manual adjustment.
 [triggers]
-crons = ["0 3 * * *"]
+crons = ["0 8 * * *"]
 
 # Environment variables
 [vars]

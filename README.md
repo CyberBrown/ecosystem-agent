@@ -54,15 +54,14 @@ bun install
 ### 2. Configure Secrets
 
 ```bash
-# GitHub personal access token (repo scope)
+# Required: GitHub personal access token (repo scope)
 wrangler secret put GITHUB_TOKEN
 
-# Mnemo API key
-wrangler secret put MNEMO_API_KEY
-
-# Optional: Slack webhook for cost alerts
+# Optional: Slack webhook for cost alerts (not currently needed)
 wrangler secret put SLACK_WEBHOOK_URL
 ```
+
+**Note**: `MNEMO_API_KEY` is not required as Mnemo worker doesn't currently use authentication.
 
 ### 3. Deploy
 
@@ -339,9 +338,17 @@ Issues created at: `https://github.com/CyberBrown/{team}/issues?q=label:autonomo
 
 ### Mnemo Cache Errors
 
-- Check `MNEMO_API_KEY` is valid
+- **Error 1042 (RESOURCE_EXHAUSTED)**: Gemini API key issue on Mnemo worker
+  - Check `/home/chris/mnemo/packages/cf-worker` has valid `GEMINI_API_KEY` secret
+  - Verify billing is enabled on Gemini API
+  - Ensure context caching permissions are granted
 - Verify cache alias: `ecosystem-agent-shared`
-- Check Mnemo API status
+- Check Mnemo API status: https://mnemo.solamp.workers.dev/health
+- Test Mnemo directly:
+  ```bash
+  curl -X POST https://mnemo.solamp.workers.dev/tools/context_list \
+    -H "Content-Type: application/json" -d '{}'
+  ```
 
 ### GitHub API Errors
 
@@ -434,6 +441,11 @@ This agent is part of the ecosystem automation. Changes should:
 
 ---
 
-🤖 **Generated**: 2025-12-05
+🤖 **Generated**: 2025-12-06
 **Version**: 0.1.0
-**Status**: Ready for deployment
+**Status**: Deployed, blocked on Mnemo Gemini API key issue
+**Last Updated**: 2025-12-06
+**Deployed At**: https://ecosystem-agent.solamp.workers.dev
+**Cron Schedule**: 0 8 * * * (3am EST daily)
+
+See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for deployment history and known issues.
