@@ -80,10 +80,11 @@ export interface ExecutionSummary {
 
 /**
  * Environment bindings for Cloudflare Worker
+ *
+ * Note: No MNEMO_API_KEY needed - Mnemo handles Gemini auth internally.
  */
 export interface Env {
   GITHUB_TOKEN: string;
-  MNEMO_API_KEY: string;
   SLACK_WEBHOOK_URL?: string;
   ENVIRONMENT: string;
 }

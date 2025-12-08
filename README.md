@@ -61,7 +61,7 @@ wrangler secret put GITHUB_TOKEN
 wrangler secret put SLACK_WEBHOOK_URL
 ```
 
-**Note**: `MNEMO_API_KEY` is not required as Mnemo worker doesn't currently use authentication.
+**Note**: No Mnemo/Gemini API key is needed. Mnemo handles all Gemini authentication internally - clients just call Mnemo's HTTP endpoints.
 
 ### 3. Deploy
 
@@ -370,7 +370,6 @@ Issues created at: `https://github.com/CyberBrown/{team}/issues?q=label:autonomo
 
 Never commit:
 - `GITHUB_TOKEN`
-- `MNEMO_API_KEY`
 - `SLACK_WEBHOOK_URL`
 
 All secrets stored in Cloudflare Workers Secrets.

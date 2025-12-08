@@ -96,10 +96,10 @@ bunx wrangler secret put GITHUB_TOKEN
 # Get token from: https://github.com/settings/tokens
 ```
 
-#### 2. MNEMO_API_KEY (Not Currently Used)
-**Status**: Optional - ecosystem-agent no longer uses auth headers.
+#### 2. MNEMO_API_KEY (Not Needed)
+**Status**: Removed - ecosystem-agent doesn't need any API key for Mnemo.
 
-**Note**: If Mnemo worker's `MNEMO_AUTH_TOKEN` is ever enabled, this would need to match.
+Mnemo handles all Gemini authentication internally. Clients just call Mnemo's HTTP endpoints without authentication (unless Mnemo's `MNEMO_AUTH_TOKEN` is configured).
 
 #### 3. SLACK_WEBHOOK_URL (Optional)
 **Purpose**: Cost alerts when monthly spend exceeds $50.

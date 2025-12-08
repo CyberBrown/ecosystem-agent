@@ -2,13 +2,14 @@ import type { TeamConfig } from './types';
 
 /**
  * Mnemo integration for context loading and querying
+ *
+ * Note: No API key needed - Mnemo handles Gemini authentication internally.
+ * Clients just call Mnemo's HTTP endpoints.
  */
 export class MnemoClient {
-  private apiKey: string;
   private baseUrl: string;
 
-  constructor(apiKey: string, baseUrl = 'https://mnemo.solamp.workers.dev') {
-    this.apiKey = apiKey;
+  constructor(baseUrl = 'https://mnemo.solamp.workers.dev') {
     this.baseUrl = baseUrl;
   }
 
