@@ -89,7 +89,8 @@ export interface ServiceBinding {
  * Environment bindings for Cloudflare Worker
  */
 export interface Env {
-  GITHUB_TOKEN: string;
+  GITHUB_TOKEN?: string;
+  RESEND_API_KEY?: string;
   MNEMO: ServiceBinding; // Service binding to Mnemo worker
   SLACK_WEBHOOK_URL?: string;
   ENVIRONMENT: string;

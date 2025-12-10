@@ -173,6 +173,7 @@ export class GitHubClient {
       'Content-Type': 'application/json',
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'ecosystem-agent/1.0',
       ...((options.headers as any) || {}),
     };
 

@@ -123,7 +123,7 @@ async function handleScheduled(env: Env): Promise<ExecutionSummary> {
   };
 
   // Send status report email
-  await sendStatusEmail(summary, duration);
+  await sendStatusEmail(env, summary, duration);
 
   return summary;
 }
@@ -322,9 +322,14 @@ async function sendCostAlert(env: Env, totalCost: number): Promise<void> {
 }
 
 /**
- * Send status report email via MailChannels
+ * Send status report email via Resend
  */
-async function sendStatusEmail(summary: ExecutionSummary, durationSecs: string): Promise<void> {
+async function sendStatusEmail(env: Env, summary: ExecutionSummary, durationSecs: string): Promise<void> {
+  if (!env.RESEND_API_KEY) {
+    console.log('RESEND_API_KEY not set, skipping email');
+    return;
+  }
+
   const date = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -442,29 +447,23 @@ ${summary.prUrl ? `Pull Request: ${summary.prUrl}` : 'No PR created'}
 `;
 
   try {
-    const response = await fetch('https://api.mailchannels.net/tx/v1/send', {
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+      },
       body: JSON.stringify({
-        personalizations: [
-          {
-            to: [{ email: 'chris@solamp.io', name: 'Chris' }],
-          },
-        ],
-        from: {
-          email: 'agent@logosflux.io',
-          name: 'Ecosystem Agent',
-        },
+        from: 'Ecosystem Agent <onboarding@resend.dev>',
+        to: ['brown.cy@gmail.com'],
         subject: `${statusEmoji} Ecosystem Agent: ${statusText} - ${new Date().toISOString().split('T')[0]}`,
-        content: [
-          { type: 'text/plain', value: textContent },
-          { type: 'text/html', value: html },
-        ],
+        text: textContent,
+        html: html,
       }),
     });
 
     if (response.ok) {
-      console.log('📧 Status report email sent to chris@solamp.io');
+      console.log('📧 Status report email sent to brown.cy@gmail.com');
     } else {
       const error = await response.text();
       console.error('Failed to send email:', response.status, error);
