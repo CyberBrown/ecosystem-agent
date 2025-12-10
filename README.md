@@ -61,7 +61,7 @@ wrangler secret put GITHUB_TOKEN
 wrangler secret put SLACK_WEBHOOK_URL
 ```
 
-**Note**: `MNEMO_API_KEY` is not required as Mnemo worker doesn't currently use authentication.
+**Note**: No `MNEMO_API_KEY` needed - we use Cloudflare Service Bindings for worker-to-worker communication.
 
 ### 3. Deploy
 
@@ -343,10 +343,10 @@ Issues created at: `https://github.com/CyberBrown/{team}/issues?q=label:autonomo
   - Verify billing is enabled on Gemini API
   - Ensure context caching permissions are granted
 - Verify cache alias: `ecosystem-agent-shared`
-- Check Mnemo API status: https://mnemo.solamp.workers.dev/health
+- Check Mnemo API status: https://mnemo.logosflux.io/health
 - Test Mnemo directly:
   ```bash
-  curl -X POST https://mnemo.solamp.workers.dev/tools/context_list \
+  curl -X POST https://mnemo.logosflux.io/tools/context_list \
     -H "Content-Type: application/json" -d '{}'
   ```
 
@@ -370,7 +370,6 @@ Issues created at: `https://github.com/CyberBrown/{team}/issues?q=label:autonomo
 
 Never commit:
 - `GITHUB_TOKEN`
-- `MNEMO_API_KEY`
 - `SLACK_WEBHOOK_URL`
 
 All secrets stored in Cloudflare Workers Secrets.
@@ -381,8 +380,10 @@ Required scopes:
 - `repo` (full repository access)
 - `write:discussion` (optional, for discussions)
 
-### Mnemo API
+### Mnemo Integration
 
+- Uses **Cloudflare Service Binding** for worker-to-worker communication
+- No API keys needed - authentication is handled by the binding
 - Shared cache contains all team documentation
 - Cache TTL: 24 hours (auto-evicts)
 - No PII stored in cache
@@ -442,10 +443,10 @@ This agent is part of the ecosystem automation. Changes should:
 ---
 
 🤖 **Generated**: 2025-12-06
-**Version**: 0.1.0
-**Status**: Deployed, blocked on Mnemo Gemini API key issue
-**Last Updated**: 2025-12-06
-**Deployed At**: https://ecosystem-agent.solamp.workers.dev
+**Version**: 0.2.0
+**Status**: Ready for deployment (uses Service Binding for Mnemo)
+**Last Updated**: 2025-12-09
+**Deployed At**: https://ecosystem-agent.logosflux.io
 **Cron Schedule**: 0 8 * * * (3am EST daily)
 
 See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for deployment history and known issues.

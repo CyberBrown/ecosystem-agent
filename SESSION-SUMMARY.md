@@ -33,7 +33,7 @@
 
 ### 2. ✅ Deployed to Cloudflare
 
-**URL**: https://ecosystem-agent.solamp.workers.dev
+**URL**: https://ecosystem-agent.logosflux.io
 **Status**: Live and healthy
 **Cron**: Active (0 3 * * *)
 
@@ -261,14 +261,14 @@ npx wrangler tail --name ecosystem-agent
 npx wrangler deployments list --name ecosystem-agent
 
 # Test manually
-curl -X POST https://ecosystem-agent.solamp.workers.dev/trigger
+curl -X POST https://ecosystem-agent.logosflux.io/trigger
 ```
 
 ### Check Nexus Tasks
 
 ```bash
 # View your task list
-curl https://nexus.solamp.workers.dev/api/tasks \
+curl https://nexus.logosflux.io/api/tasks \
   -H 'Authorization: Bearer eyJ0ZW5hbnRfaWQiOiIzMmViNDVkMC1iNGUwLTRlNTgtYWIwZS00NGMxMGIyODQxMjMiLCJ1c2VyX2lkIjoiMWFjNjgyZTEtMmNiNC00ZjdhLTkwMTQtYmE0MWZiMTE2MjNmIiwiZXhwIjoxNzY1MDgxMDcyNjUwfQ=='
 ```
 

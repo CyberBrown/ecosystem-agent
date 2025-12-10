@@ -41,7 +41,7 @@ async function handleScheduled(env: Env): Promise<ExecutionSummary> {
   console.log('🚀 Ecosystem Agent started at', new Date().toISOString());
 
   // Initialize clients
-  const mnemo = new MnemoClient(env.MNEMO_API_KEY);
+  const mnemo = new MnemoClient(env.MNEMO);
   const github = new GitHubClient(env.GITHUB_TOKEN);
 
   const results: AgentResult[] = [];

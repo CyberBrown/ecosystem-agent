@@ -2,6 +2,30 @@
 
 ## Deployment History
 
+### 2025-12-09: Service Binding Migration
+
+**Change**: Migrated from HTTP API calls to Cloudflare Service Bindings for Mnemo communication.
+
+**Why**:
+- Eliminates need for API keys/tokens
+- Worker-to-worker communication is faster (no external HTTP)
+- Authentication is handled automatically by Cloudflare
+
+**Changes Made**:
+- `wrangler.toml`: Added `[[services]]` binding to `mnemo` worker
+- `src/types.ts`: Updated `Env` to use `ServiceBinding` instead of `MNEMO_API_KEY`
+- `src/mnemo.ts`: Refactored to use `env.MNEMO.fetch()` instead of global `fetch()`
+- `src/index.ts`: Pass `env.MNEMO` to `MnemoClient` constructor
+
+**Verification**:
+```bash
+# Deploy and test
+bun run deploy
+curl -X POST https://ecosystem-agent.logosflux.io/trigger
+```
+
+---
+
 ### 2025-12-06: Initial Deployment & Fixes
 
 #### Issue 1: Cron Schedule
@@ -17,7 +41,7 @@
 **Root Cause**: Mnemo uses MCP (Model Context Protocol), not traditional REST API.
 
 **Fix Applied**: Updated `src/mnemo.ts` to use correct endpoints:
-- ✅ Base URL: `https://mnemo.solamp.workers.dev`
+- ✅ Base URL: `https://mnemo.logosflux.io`
 - ✅ Endpoints: `/tools/context_load`, `/tools/context_query`, `/tools/context_list`, `/tools/context_stats`
 - ✅ Method: POST (not GET)
 - ✅ Removed: Authorization headers (not required - no MNEMO_AUTH_TOKEN configured)
@@ -49,7 +73,7 @@ sources: [
 
 **Problem**: Mnemo worker returns `error code: 1042` (RESOURCE_EXHAUSTED) when trying to create/query caches.
 
-**Cause**: The Mnemo Cloudflare Worker (`mnemo.solamp.workers.dev`) has a `GEMINI_API_KEY` secret configured, but it's either:
+**Cause**: The Mnemo Cloudflare Worker (`mnemo.logosflux.io`) has a `GEMINI_API_KEY` secret configured, but it's either:
 - Invalid or expired
 - Missing billing/quota
 - Lacking context caching permissions
@@ -96,10 +120,15 @@ bunx wrangler secret put GITHUB_TOKEN
 # Get token from: https://github.com/settings/tokens
 ```
 
-#### 2. MNEMO_API_KEY (Not Currently Used)
-**Status**: Optional - ecosystem-agent no longer uses auth headers.
+#### 2. MNEMO Service Binding
+**Status**: Configured in `wrangler.toml` - no secret needed.
 
-**Note**: If Mnemo worker's `MNEMO_AUTH_TOKEN` is ever enabled, this would need to match.
+**Note**: Uses Cloudflare Service Binding for worker-to-worker communication. The binding is configured as:
+```toml
+[[services]]
+binding = "MNEMO"
+service = "mnemo"
+```
 
 #### 3. SLACK_WEBHOOK_URL (Optional)
 **Purpose**: Cost alerts when monthly spend exceeds $50.
@@ -139,7 +168,7 @@ bunx wrangler secret put GITHUB_TOKEN
 
 ### Manual Trigger
 ```bash
-curl -X POST https://ecosystem-agent.solamp.workers.dev/trigger
+curl -X POST https://ecosystem-agent.logosflux.io/trigger
 ```
 
 ### Check Logs
@@ -150,22 +179,22 @@ bunx wrangler tail
 ### Verify Mnemo Access
 ```bash
 # List caches
-curl -X POST https://mnemo.solamp.workers.dev/tools/context_list \
+curl -X POST https://mnemo.logosflux.io/tools/context_list \
   -H "Content-Type: application/json" \
   -d '{}'
 
 # Query existing cache
-curl -X POST https://mnemo.solamp.workers.dev/tools/context_query \
+curl -X POST https://mnemo.logosflux.io/tools/context_query \
   -H "Content-Type: application/json" \
   -d '{"alias":"nexus","query":"What is Nexus?","maxTokens":100}'
 ```
 
 ## Next Steps
 
-1. **Fix Gemini API Key** on Mnemo worker (blocks all functionality)
-2. **Set GITHUB_TOKEN** secret on ecosystem-agent
+1. **Deploy** the updated worker with Service Binding
+2. **Set GITHUB_TOKEN** secret on ecosystem-agent (if not already set)
 3. **Test end-to-end** with manual trigger
-4. **Monitor first automatic run** at 3am EST (Dec 7, 2025)
+4. **Monitor first automatic run** at 3am EST
 5. **Review generated PR** for quality
 
 ## Developer Guide Improvements Needed
@@ -180,10 +209,10 @@ Based on this experience, the developer guides should clarify:
 
 ## Deployment Info
 
-**Worker URL**: https://ecosystem-agent.solamp.workers.dev
+**Worker URL**: https://ecosystem-agent.logosflux.io
 **Cron Schedule**: `0 8 * * *` (3am EST daily)
-**Version**: 0.1.0
-**Last Deploy**: 2025-12-06 (Version ID: 9e68813e-a13f-407a-b229-89bc1849588f)
+**Version**: 0.2.0
+**Last Deploy**: Pending (Service Binding migration)
 
 ## Related Documentation
 
