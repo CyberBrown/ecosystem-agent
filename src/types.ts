@@ -79,12 +79,21 @@ export interface ExecutionSummary {
 }
 
 /**
+ * Service binding interface for worker-to-worker calls
+ */
+export interface ServiceBinding {
+  fetch(request: Request | string, init?: RequestInit): Promise<Response>;
+}
+
+/**
  * Environment bindings for Cloudflare Worker
  *
  * Note: No MNEMO_API_KEY needed - Mnemo handles Gemini auth internally.
  */
 export interface Env {
-  GITHUB_TOKEN: string;
+  GITHUB_TOKEN?: string;
+  RESEND_API_KEY?: string;
+  MNEMO: ServiceBinding; // Service binding to Mnemo worker
   SLACK_WEBHOOK_URL?: string;
   ENVIRONMENT: string;
 }

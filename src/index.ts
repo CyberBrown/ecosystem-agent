@@ -41,8 +41,7 @@ async function handleScheduled(env: Env): Promise<ExecutionSummary> {
   console.log('🚀 Ecosystem Agent started at', new Date().toISOString());
 
   // Initialize clients
-  // Note: MnemoClient doesn't need an API key - Mnemo handles Gemini auth internally
-  const mnemo = new MnemoClient();
+  const mnemo = new MnemoClient(env.MNEMO);
   const github = new GitHubClient(env.GITHUB_TOKEN);
 
   const results: AgentResult[] = [];
@@ -122,6 +121,9 @@ async function handleScheduled(env: Env): Promise<ExecutionSummary> {
     prUrl,
     issuesCreated,
   };
+
+  // Send status report email
+  await sendStatusEmail(env, summary, duration);
 
   return summary;
 }
@@ -316,6 +318,158 @@ async function sendCostAlert(env: Env, totalCost: number): Promise<void> {
     } catch (error) {
       console.error('Failed to send Slack alert:', error);
     }
+  }
+}
+
+/**
+ * Send status report email via Resend
+ */
+async function sendStatusEmail(env: Env, summary: ExecutionSummary, durationSecs: string): Promise<void> {
+  if (!env.RESEND_API_KEY) {
+    console.log('RESEND_API_KEY not set, skipping email');
+    return;
+  }
+
+  const date = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const successCount = summary.results.filter((r) => r.errors.length === 0).length;
+  const totalTeams = summary.results.length;
+  const hasErrors = summary.results.some((r) => r.errors.length > 0);
+
+  const statusEmoji = hasErrors ? '⚠️' : '✅';
+  const statusText = hasErrors ? 'Completed with errors' : 'Completed successfully';
+
+  // Build team summaries
+  const teamSummaries = summary.results
+    .map((r) => {
+      const teamEmoji = r.errors.length === 0 ? '✅' : '⚠️';
+      const errorSection =
+        r.errors.length > 0
+          ? `<div style="color: #dc2626; margin-top: 8px;"><strong>Errors:</strong><ul>${r.errors.map((e) => `<li>${e}</li>`).join('')}</ul></div>`
+          : '';
+
+      return `
+      <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+        <h3 style="margin: 0 0 12px 0; color: #1e293b;">${teamEmoji} ${TEAMS.find((t) => t.name === r.team)?.displayName || r.team}</h3>
+        <table style="width: 100%; font-size: 14px;">
+          <tr><td style="padding: 4px 0; color: #64748b;">Questions Answered</td><td style="text-align: right; font-weight: 600;">${r.questionsAnswered}</td></tr>
+          <tr><td style="padding: 4px 0; color: #64748b;">Answers Reviewed</td><td style="text-align: right; font-weight: 600;">${r.answersReviewed}</td></tr>
+          <tr><td style="padding: 4px 0; color: #64748b;">Docs Updated</td><td style="text-align: right; font-weight: 600;">${r.docsUpdated.length > 0 ? r.docsUpdated.join(', ') : 'None'}</td></tr>
+          <tr><td style="padding: 4px 0; color: #64748b;">MCP Updates</td><td style="text-align: right; font-weight: 600;">${r.mcpUpdatesProcessed}</td></tr>
+          <tr><td style="padding: 4px 0; color: #64748b;">Action Plan</td><td style="text-align: right; font-weight: 600;">${r.actionPlanUpdated ? '✓ Updated' : 'No changes'}</td></tr>
+          <tr><td style="padding: 4px 0; color: #64748b;">README</td><td style="text-align: right; font-weight: 600;">${r.readmeUpdated ? '✓ Updated' : 'No changes'}</td></tr>
+        </table>
+        ${errorSection}
+      </div>`;
+    })
+    .join('');
+
+  const prSection = summary.prUrl
+    ? `<p style="margin: 16px 0;"><a href="${summary.prUrl}" style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">Review Pull Request</a></p>`
+    : '<p style="color: #64748b;">No PR created (no changes to commit)</p>';
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #ffffff;">
+  <div style="text-align: center; margin-bottom: 24px;">
+    <h1 style="color: #1e293b; margin: 0;">🤖 Ecosystem Agent</h1>
+    <p style="color: #64748b; margin: 8px 0 0 0;">Daily Status Report</p>
+  </div>
+
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 24px; color: white; margin-bottom: 24px;">
+    <h2 style="margin: 0 0 8px 0; font-size: 18px;">${statusEmoji} ${statusText}</h2>
+    <p style="margin: 0; opacity: 0.9;">${date}</p>
+    <div style="margin-top: 16px; display: flex; gap: 24px;">
+      <div>
+        <div style="font-size: 28px; font-weight: bold;">${successCount}/${totalTeams}</div>
+        <div style="font-size: 12px; opacity: 0.8;">Teams OK</div>
+      </div>
+      <div>
+        <div style="font-size: 28px; font-weight: bold;">$${summary.totalCost.toFixed(2)}</div>
+        <div style="font-size: 12px; opacity: 0.8;">Est. Cost</div>
+      </div>
+      <div>
+        <div style="font-size: 28px; font-weight: bold;">${durationSecs}s</div>
+        <div style="font-size: 12px; opacity: 0.8;">Duration</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 style="color: #1e293b; font-size: 16px; margin-bottom: 16px;">Team Results</h2>
+  ${teamSummaries}
+
+  <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
+    <h3 style="color: #1e293b; font-size: 14px; margin-bottom: 12px;">Pull Request</h3>
+    ${prSection}
+  </div>
+
+  <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center; color: #94a3b8; font-size: 12px;">
+    <p>Ecosystem Agent • <a href="https://ecosystem-agent.logosflux.io" style="color: #64748b;">Dashboard</a></p>
+    <p>Running daily at 3am EST</p>
+  </div>
+</body>
+</html>`;
+
+  const textContent = `
+Ecosystem Agent - Daily Status Report
+${date}
+
+Status: ${statusText}
+Teams: ${successCount}/${totalTeams} OK
+Cost: $${summary.totalCost.toFixed(2)}
+Duration: ${durationSecs}s
+
+${summary.results
+  .map(
+    (r) => `
+${TEAMS.find((t) => t.name === r.team)?.displayName || r.team}:
+- Questions Answered: ${r.questionsAnswered}
+- Answers Reviewed: ${r.answersReviewed}
+- Docs Updated: ${r.docsUpdated.length > 0 ? r.docsUpdated.join(', ') : 'None'}
+- MCP Updates: ${r.mcpUpdatesProcessed}
+- Action Plan: ${r.actionPlanUpdated ? 'Updated' : 'No changes'}
+- README: ${r.readmeUpdated ? 'Updated' : 'No changes'}
+${r.errors.length > 0 ? `- Errors: ${r.errors.join('; ')}` : ''}`
+  )
+  .join('\n')}
+
+${summary.prUrl ? `Pull Request: ${summary.prUrl}` : 'No PR created'}
+`;
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: 'Ecosystem Agent <onboarding@resend.dev>',
+        to: ['brown.cy@gmail.com'],
+        subject: `${statusEmoji} Ecosystem Agent: ${statusText} - ${new Date().toISOString().split('T')[0]}`,
+        text: textContent,
+        html: html,
+      }),
+    });
+
+    if (response.ok) {
+      console.log('📧 Status report email sent to brown.cy@gmail.com');
+    } else {
+      const error = await response.text();
+      console.error('Failed to send email:', response.status, error);
+    }
+  } catch (error) {
+    console.error('Failed to send status email:', error);
   }
 }
 

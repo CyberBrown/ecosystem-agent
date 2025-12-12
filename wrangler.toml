@@ -16,5 +16,8 @@ ENVIRONMENT = "production"
 # Secrets (set with `wrangler secret put <KEY>`)
 # - GITHUB_TOKEN: GitHub personal access token with repo access
 # - SLACK_WEBHOOK_URL: Optional - for failure notifications
-#
-# Note: No MNEMO_API_KEY needed - Mnemo handles Gemini auth internally
+
+# Service Bindings - worker-to-worker communication (no auth needed)
+[[services]]
+binding = "MNEMO"
+service = "mnemo"

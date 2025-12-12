@@ -1,16 +1,29 @@
-import type { TeamConfig } from './types';
+import type { TeamConfig, ServiceBinding } from './types';
 
 /**
  * Mnemo integration for context loading and querying
  *
- * Note: No API key needed - Mnemo handles Gemini authentication internally.
- * Clients just call Mnemo's HTTP endpoints.
+ * Uses Cloudflare Service Binding for worker-to-worker communication.
+ * No API key needed - authentication is handled by the binding.
  */
 export class MnemoClient {
-  private baseUrl: string;
+  private binding: ServiceBinding;
 
-  constructor(baseUrl = 'https://mnemo.solamp.workers.dev') {
-    this.baseUrl = baseUrl;
+  constructor(binding: ServiceBinding) {
+    this.binding = binding;
+  }
+
+  /**
+   * Make a request to Mnemo via service binding
+   */
+  private async request(tool: string, params: Record<string, unknown>): Promise<Response> {
+    return this.binding.fetch(`https://mnemo/tools/${tool}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params),
+    });
   }
 
   /**
@@ -37,17 +50,11 @@ export class MnemoClient {
 
     console.log(`Loading shared cache with ${sources.length} sources...`);
 
-    const response = await fetch(`${this.baseUrl}/tools/context_load`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        alias,
-        sources,
-        systemInstruction: 'You are helping autonomous agents answer cross-team questions and maintain documentation.',
-        ttl: 86400, // 24 hours
-      }),
+    const response = await this.request('context_load', {
+      alias,
+      sources,
+      systemInstruction: 'You are helping autonomous agents answer cross-team questions and maintain documentation.',
+      ttl: 86400, // 24 hours
     });
 
     if (!response.ok) {
@@ -64,17 +71,11 @@ export class MnemoClient {
   async query(question: string): Promise<string> {
     const alias = 'ecosystem-agent-shared';
 
-    const response = await fetch(`${this.baseUrl}/tools/context_query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        alias,
-        query: question,
-        maxTokens: 2000,
-        temperature: 0.3,
-      }),
+    const response = await this.request('context_query', {
+      alias,
+      query: question,
+      maxTokens: 2000,
+      temperature: 0.3,
     });
 
     if (!response.ok) {
@@ -94,13 +95,7 @@ export class MnemoClient {
    * List all active caches
    */
   async listCaches(): Promise<any[]> {
-    const response = await fetch(`${this.baseUrl}/tools/context_list`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}),
-    });
+    const response = await this.request('context_list', {});
 
     if (!response.ok) {
       return [];
@@ -123,13 +118,7 @@ export class MnemoClient {
    * Get cost statistics
    */
   async getStats(): Promise<{ totalCost: number; tokensUsed: number }> {
-    const response = await fetch(`${this.baseUrl}/tools/context_stats`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}),
-    });
+    const response = await this.request('context_stats', {});
 
     if (!response.ok) {
       return { totalCost: 0, tokensUsed: 0 };
